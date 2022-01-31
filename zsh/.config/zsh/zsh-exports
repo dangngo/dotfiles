@@ -1,0 +1,20 @@
+#!/bin/sh
+if command -v nvim > /dev/null; then
+  EDITOR="nvim"
+elif command -v vim > /dev/null; then
+  EDITOR="vim"
+else
+  EDITOR="vi"
+fi
+export EDITOR
+
+HISTSIZE=1000000
+SAVEHIST=1000000
+export PATH="$HOME/.local/bin":$PATH
+#export MANPAGER='nvim +Man!'
+
+export MANWIDTH=999
+export PATH=$HOME/.cargo/bin:$PATH
+export PATH=$HOME/.local/share/go/bin:$PATH
+export GOPATH=$HOME/.local/share/go
+export VISUAL=${EDITOR}
