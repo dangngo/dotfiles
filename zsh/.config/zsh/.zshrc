@@ -45,10 +45,10 @@ zsh_add_plugin "agkozak/zsh-z"
 # More completions https://github.com/zsh-users/zsh-completions
 
 # Key-bindings
-bindkey -s '^n' 'vim $(fzf)^M'
+#bindkey -s '^n' 'vim $(fzf)^M'
 bindkey '^[[P' delete-char
-bindkey "^k" up-line-or-beginning-search # Up
-bindkey "^j" down-line-or-beginning-search # Down
+bindkey "^p" up-line-or-beginning-search # Up
+bindkey "^n" down-line-or-beginning-search # Down
 bindkey -r "^u"
 bindkey -r "^d"
 
