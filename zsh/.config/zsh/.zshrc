@@ -40,6 +40,7 @@ zsh_add_file "zsh-aliases"
 zsh_add_plugin "zsh-users/zsh-syntax-highlighting"
 zsh_add_plugin "hlissner/zsh-autopair"
 zsh_add_plugin "Aloxaf/fzf-tab"
+zsh_add_plugin "agkozak/zsh-z"
 # For more plugins: https://github.com/unixorn/awesome-zsh-plugins
 # More completions https://github.com/zsh-users/zsh-completions
 
