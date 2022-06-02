@@ -1,0 +1,8 @@
+#!/bin/sh
+# !!! IMPORTANT !!!
+# Copy this to somewhere that will be sourced on a new shell instance, e.g: .zshrc, .zprofile
+# function wezterm_edit_file() {
+#     session="$(tmux ls -F "#{session_name}: #{?session_attached,attached,not attached}" | grep -v "not" | cut -d":" -f1)"
+#     tmux new-window -n "$(basename $1)" -t "$session": "$EDITOR +$2 $1" 
+# }
+zsh --login -c "source ~/.zshrc && wezterm_edit_file $1 $2"
