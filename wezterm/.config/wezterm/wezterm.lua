@@ -67,7 +67,7 @@ return {
     -- URL
     -- example https://wezfurlong.org/wezterm/hyperlinks.html
     {
-      regex = "\\b\\w+://(?:[\\w.-]+)\\.[a-z]{2,15}\\S*\\b",
+      regex = "\\b\\w+://(?:[\\w.-]+)[a-z]{2,15}\\S*\\b",
       format = "$0",
     },
 
