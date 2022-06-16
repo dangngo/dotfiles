@@ -1,2 +1,2 @@
-.zcompdump
-plugins
+*.zcompdump*
+.zcomet

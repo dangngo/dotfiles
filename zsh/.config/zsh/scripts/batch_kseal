@@ -1,0 +1,12 @@
+#!/bin/bash
+# Batch encrypt secrets in KEY=VALUE format
+kseal-add () {
+    echo -n "$2" | kubectl create secret generic abc --dry-run=client --from-file=${1}=/dev/stdin -o json | kubeseal --controller-namespace=kube-system --controller-name=sealed-secrets --format yaml --merge-into $3
+}
+
+while IFS= read line; do
+    key=${line%%=*}
+    value=${line##*=}
+    echo "### Encrypting key: $key with value: $value";
+    kseal-add $key $value $2
+done < $1

@@ -1,0 +1,33 @@
+#!/bin/sh
+alias ls="ls -G"
+alias ll="ls -lh"
+alias la="ls -alh"
+
+alias vim="nvim"
+alias vi="nvim"
+alias load-ssh="cat ~/.ssh/config.d/* > ~/.ssh/config"
+alias load-zshrc="source ~/.zshrc"
+alias dotfiles='/usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME'
+alias batman="bat -l man -p"
+alias batjson="jq . | bat -l json"
+alias date="gdate"
+alias kctx="kubectx"
+alias awsctx="source ~/.scripts/awsctx"
+alias tmux-base="tmuxp load ~/.tmuxp/base.yaml"
+alias gssh="gcloud compute ssh --tunnel-through-iap"
+alias gscp="gcloud compute scp --tunnel-through-iap"
+
+# fast terraform plan
+alias tfp='TF_CLI_ARGS_plan="-compact-warnings" terraform plan -lock=false -refresh=false'
+
+# switch between cli versions
+alias kctlv='asdf shell kubectl $(asdf list kubectl | fzf)'
+alias kopsv='asdf shell kops $(asdf list kops | fzf)'
+
+# Kubectl
+alias sk='kubectl -n kube-system'
+alias fk='kubectl -n flux-system'
+alias mk='kubectl -n monitoring'
+
+alias kghr='kubectl get hr'
+alias kgk="kubectl get kustomizations.kustomize.toolkit.fluxcd.io"

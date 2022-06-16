@@ -1,0 +1,1 @@
+zsh --login -c "source ~/.zshrc && wezterm_edit_file $1 $2"

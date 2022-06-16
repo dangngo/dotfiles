@@ -1,0 +1,21 @@
+#!/bin/zsh
+# Clone zcomet if necessary
+if [[ ! -f ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh ]]; then
+  command git clone https://github.com/agkozak/zcomet.git ${ZDOTDIR:-${HOME}}/.zcomet/bin
+fi
+
+source ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh
+
+# Plugins
+zcomet load agkozak/zsh-z
+zcomet load hlissner/zsh-autopair
+zcomet load Aloxaf/fzf-tab
+
+# tmux & terminal titles
+# zcomet snippet https://github.com/jreese/zsh-titles/blob/master/titles.plugin.zsh
+
+zcomet load zsh-users/zsh-syntax-highlighting
+
+# Run compinit and compile its cache
+zcomet compinit
+

@@ -1,76 +1,68 @@
 #!/bin/sh
 export ZDOTDIR=$HOME/.config/zsh
-HISTFILE=~/.zsh_history
-setopt appendhistory
 
-# some useful options (man zshoptions)
-setopt autocd extendedglob nomatch menucomplete
+# General
+setopt autocd
+setopt extendedglob
+setopt nomatch
+setopt notify
+# setopt menucomplete
+unsetopt menucomplete
+setopt automenu
 setopt interactive_comments
-stty stop undef        # Disable ctrl-s to freeze terminal.
-zle_highlight=('paste:none')
-
-# beeping is annoying
 unsetopt BEEP
 
-# completions
-autoload -Uz compinit
-zstyle ':completion:*' menu select
-# zstyle ':completion::complete:lsof:*' menu yes select
-zmodload zsh/complist
-# compinit
-_comp_options+=(globdots)        # Include hidden files.
+# Disable ctrl-s to freeze terminal.
+stty stop undef
+# Disable highlight pasted content
+zle_highlight=('paste:none')
 
-autoload -U up-line-or-beginning-search
-autoload -U down-line-or-beginning-search
-zle -N up-line-or-beginning-search
-zle -N down-line-or-beginning-search
+# History
+HISTFILE=~/.zsh_history
+HISTSIZE=1000000
+SAVEHIST=1000000
+setopt HIST_FIND_NO_DUPS
+setopt HIST_IGNORE_ALL_DUPS
+setopt HIST_IGNORE_SPACE
+setopt appendhistory
+setopt sharehistory
+setopt incappendhistory
 
 # Colors
 autoload -Uz colors && colors
 
-# Useful Functions
-source "$ZDOTDIR/zsh-functions"
+# Completions
+zstyle ':completion:*' menu select
+zstyle ':completion::complete:lsof:*' menu yes select
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}' # case insensitive
+zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS} # set list-colors to enable filename colorizing
+zstyle ':fzf-tab:complete:cd:*' fzf-preview 'exa -1 --color=always $realpath' # preview directory's content with exa when completing cd
+zmodload zsh/complist
+# _comp_options+=(globdots) # Include hidden files.
 
-# Normal files to source
-zsh_add_file "zsh-exports"
-zsh_add_file "zsh-vim-mode"
-zsh_add_file "zsh-aliases"
+# Source functions
+source "$ZDOTDIR/functions"
+
+# Enable vim mode
+_zsh_add_file "vim-mode"
+
+# Keybindings
+_zsh_add_file "keybindings"
+
+# Set aliases
+_add_file "$HOME/.aliases"
 
 # Plugins
-zsh_add_plugin "zsh-users/zsh-syntax-highlighting"
-zsh_add_plugin "hlissner/zsh-autopair"
-zsh_add_plugin "Aloxaf/fzf-tab"
-zsh_add_plugin "agkozak/zsh-z"
-# For more plugins: https://github.com/unixorn/awesome-zsh-plugins
-# More completions https://github.com/zsh-users/zsh-completions
+_zsh_add_file "plugins"
 
-# Key-bindings
-#bindkey -s '^n' 'vim $(fzf)^M'
-bindkey '^[[P' delete-char
-bindkey "^p" up-line-or-beginning-search # Up
-bindkey "^n" down-line-or-beginning-search # Down
-bindkey -r "^u"
-bindkey -r "^d"
-
-# FZF 
-# TODO update for mac
-[ -f /usr/share/fzf/completion.zsh ] && source /usr/share/fzf/completion.zsh
-[ -f /usr/share/fzf/key-bindings.zsh ] && source /usr/share/fzf/key-bindings.zsh
-[ -f /usr/share/doc/fzf/examples/completion.zsh ] && source /usr/share/doc/fzf/examples/completion.zsh
-[ -f /usr/share/doc/fzf/examples/key-bindings.zsh ] && source /usr/share/doc/fzf/examples/key-bindings.zsh
+# FZF
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
-[ -f $ZDOTDIR/completion/_fnm ] && fpath+="$ZDOTDIR/completion/"
 export FZF_DEFAULT_COMMAND="fd . $HOME --hidden"
 export FZF_DEFAULT_OPTS="--layout=reverse --inline-info --height=30%"
 
-compinit
+# ASDF
+. /opt/homebrew/opt/asdf/libexec/asdf.sh
 
-# NVM
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-
-# Edit line in vim with ctrl-e:
-autoload edit-command-line; zle -N edit-command-line
-
+# Prompt
 eval "$(starship init zsh)"
+

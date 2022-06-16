@@ -1,0 +1,44 @@
+#!/bin/zsh
+####################
+#       ZSH        #
+####################
+# Source files in ZSH config dir
+function _zsh_add_file() {
+    [ -f "$ZDOTDIR/$1" ] && source "$ZDOTDIR/$1"
+}
+
+# Source file anywhere
+function _add_file() {
+    [ -f "$1" ] && source "$1"
+}
+
+####################
+#    Kubernetes    #
+####################
+function kseal-add {
+    echo -n "$2" \
+        | kubectl create secret generic abc --dry-run=client --from-file=${1}=/dev/stdin -o json \
+        | kubeseal --controller-namespace=kube-system --controller-name=sealed-secrets --format yaml --merge-into $3
+}
+
+function flux_reconcile_kustomization {
+    namespace=$1
+    flux reconcile kustomization ${namespace}-reconciler --with-source --verbose -n $namespace
+}
+
+function k8s_decrypt_secret {
+    kubectl get secret "$1" -o json | jq -r '.data | map_values(@base64d)'
+}
+
+function k8s_copy_secret_value {
+    secret="$1"
+    key="$2"
+    kubectl get secret "$secret" -o json | jq -r '.data."$2" | @base64d' | pbcopy
+}
+
+####################
+#      Utils       #
+####################
+function json_2_env {
+    jq -r "to_entries|map(\"\(.key)=\(.value|tostring)\")|.[]"
+}
