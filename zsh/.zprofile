@@ -4,6 +4,7 @@
 export EDITOR="nvim"
 export TERMINAL="wezterm"
 export NVM_DIR="$HOME/.nvm"
+export KUBECONFIG="$HOME/.kube/config"
 
 export DISABLE_AUTO_TITLE='true'
 
@@ -14,7 +15,7 @@ export MANPAGER="sh -c 'col -bx | bat -l man -p'"
 export AWS_PAGER=""
 
 PATH="$HOME/.local/bin:$PATH"
-PATH="/opt/homebrew/bin:$PATH"
+[ -d "/opt/homebrew/bin" ] && PATH="/opt/homebrew/bin:$PATH"
 
 # Homebrew completions
 #FPATH="$(brew --prefix)/share/zsh/site-functions:${FPATH}"
@@ -24,6 +25,12 @@ PATH="/opt/homebrew/bin:$PATH"
 
 # Go binary
 [ -d "$HOME/go/bin" ] && PATH="$HOME/go/bin:$PATH"
+
+# Rust
+[ -d "$HOME/.cargo/bin" ] && PATH="$HOME/.cargo/bin:$PATH"
+
+# Bob (neovim manager)
+[ -d "$HOME/.local/share/bob/nvim-bin" ] && PATH="$HOME/.local/share/bob/nvim-bin:$PATH"
 
 # Adds `~/.scripts` and all subdirectories to $PATH
 [ -d "$HOME/.scripts" ] && PATH="$PATH:$(du "$HOME/.scripts/" | cut -f2 | tr '\n' ':' | sed 's/:*$//')"
