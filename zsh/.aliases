@@ -2,6 +2,7 @@
 alias ls="ls -G --color"
 alias ll="ls -lh --color"
 alias la="ls -alh"
+alias aptinstall="sudo apt-get install --no-install-recommends"
 
 alias vim="nvim"
 alias vi="nvim"

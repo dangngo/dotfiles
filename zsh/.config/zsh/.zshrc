@@ -57,9 +57,6 @@ _add_file "$HOME/.aliases"
 # Plugins
 _zsh_add_file "plugins"
 
-# Kubectl
-source <(kubectl completion zsh)
-
 # FZF
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 export FZF_DEFAULT_COMMAND="fd . $HOME --hidden"
@@ -69,9 +66,12 @@ export FZF_DEFAULT_OPTS="--layout=reverse --inline-info --height=30%"
 [ -f "/opt/homebrew/opt/asdf/libexec/asdf.sh" ] && . /opt/homebrew/opt/asdf/libexec/asdf.sh
 # [ -f "$HOME/.asdf/asdf.sh" ] && . "$HOME/.asdf/asdf.sh"
 
-# rtx
-eval "$(rtx activate zsh)"
-eval "$(rtx hook-env)"
+# misc (binary manager)
+[ -f "$HOME/.local/bin/mise" ] && eval "$($HOME/.local/bin/mise activate zsh)"
+[ -f "$HOME/.local/bin/mise" ] && eval "$($HOME/.local/bin/mise hook-env)"
+
+# Kubectl
+source <(kubectl completion zsh)
 
 # Prompt
 eval "$(starship init zsh)"
