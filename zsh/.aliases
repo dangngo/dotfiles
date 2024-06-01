@@ -6,15 +6,13 @@ alias aptinstall="sudo apt-get install --no-install-recommends"
 
 alias vim="nvim"
 alias vi="nvim"
+alias lg="lazygit"
 alias load-ssh="cat ~/.ssh/config.d/* > ~/.ssh/config"
 alias load-zshrc="source ~/.zshrc"
-alias dotfiles='/usr/bin/git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME'
 alias batman="bat -l man -p"
 alias batjson="jq . | bat -l json"
-alias date="gdate"
 alias kctx="kubectx"
 alias awsctx="source ~/.scripts/awsctx"
-alias tmux-base="tmuxp load ~/.tmuxp/base.yaml"
 alias gssh="gcloud compute ssh --tunnel-through-iap"
 alias gscp="gcloud compute scp --tunnel-through-iap"
 

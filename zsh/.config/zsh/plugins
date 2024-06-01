@@ -7,7 +7,7 @@ fi
 source ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh
 
 # Plugins
-zcomet load agkozak/zsh-z
+# zcomet load agkozak/zsh-z
 zcomet load hlissner/zsh-autopair
 zcomet load Aloxaf/fzf-tab
 

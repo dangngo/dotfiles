@@ -74,5 +74,7 @@ export FZF_DEFAULT_OPTS="--layout=reverse --inline-info --height=30%"
 source <(kubectl completion zsh)
 
 # Prompt
-eval "$(starship init zsh)"
+[ -x "$(command -v starship)" ] && eval "$(starship init zsh)"
 
+# Z
+[ -x "$(command -v zoxide)" ] && eval "$(zoxide init zsh)"
