@@ -42,3 +42,7 @@ function k8s_copy_secret_value {
 function json_2_env {
     jq -r "to_entries|map(\"\(.key)=\(.value|tostring)\")|.[]"
 }
+
+function take {
+  mkdir -p $@ && cd ${@:$#}
+}
