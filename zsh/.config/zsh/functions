@@ -52,3 +52,11 @@ function cleanup_nvim_cache {
 function take {
   mkdir -p $@ && cd ${@:$#}
 }
+function tmuxstart {
+	tmux new-session -d -s base
+	tmux new-session -d -s focus
+	tmux new-session -d -s service
+	tmux new-session -d -s playground
+	tmux attach-session -t base
+}
+

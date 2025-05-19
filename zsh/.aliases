@@ -1,7 +1,15 @@
 #!/bin/sh
 alias ls="ls -G --color"
-alias ll="ls -lh --color"
-alias la="ls -alh"
+if [ -x "$(command -v eza)" ]; then
+	alias ll="eza -lh"
+else
+	alias ll="ls -lh --color"
+fi
+if [ -x "$(command -v eza)" ]; then
+	alias la="eza -alh"
+else
+	alias la="ls -alh"
+fi
 alias aptinstall="sudo apt-get install --no-install-recommends"
 
 alias vim="nvim"
@@ -13,12 +21,18 @@ alias load-zshrc="source ~/.zshrc"
 alias batman="bat -l man -p"
 alias batjson="jq . | bat -l json"
 alias kctx="kubectx"
-alias awsctx="source ~/.scripts/awsctx"
+alias kns="kubens"
+alias awsctx="source ~/.config/zsh/scripts/awsctx"
 alias gssh="gcloud compute ssh --tunnel-through-iap"
 alias gscp="gcloud compute scp --tunnel-through-iap"
 
 # fast terraform plan
 alias tfp='TF_CLI_ARGS_plan="-compact-warnings" terraform plan -lock=false -refresh=false'
+
+# git
+alias gp="git pull"
+alias gco="git checkout"
+alias gcom="git checkout master"
 
 # Kubectl
 alias k='kubectl'

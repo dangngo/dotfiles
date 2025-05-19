@@ -58,7 +58,7 @@ _add_file "$HOME/.aliases"
 _zsh_add_file "plugins"
 
 # FZF
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+[ -f ~/.config/zsh/fzf.zsh ] && source ~/.config/zsh/fzf.zsh
 export FZF_DEFAULT_COMMAND="fd . $HOME --hidden"
 export FZF_DEFAULT_OPTS="--layout=reverse --inline-info --height=30%"
 
@@ -71,7 +71,7 @@ export FZF_DEFAULT_OPTS="--layout=reverse --inline-info --height=30%"
 [ -f "$HOME/.local/bin/mise" ] && eval "$($HOME/.local/bin/mise hook-env)"
 
 # Kubectl
-source <(kubectl completion zsh)
+[ -x "$(command -v kubectl)" ] && source <(kubectl completion zsh)
 
 # Prompt
 [ -x "$(command -v starship)" ] && eval "$(starship init zsh)"

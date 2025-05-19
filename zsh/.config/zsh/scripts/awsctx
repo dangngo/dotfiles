@@ -1,2 +1,2 @@
 #!/bin/bash
-export AWS_PROFILE=$(cat ~/.aws/credentials | grep -v long-term | gsed -nr 's/^\[([a-zA-Z0-9_-]*)\]$/\1/p' | fzf)
+export AWS_PROFILE=$(cat ~/.aws/config | grep -v long-term | gsed -n 's/^\[profile \([^]]*\)\]/\1/p' | fzf)
