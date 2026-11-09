@@ -127,7 +127,11 @@ end
 --- Open a picker.
 --- opts.items: fun(): item[]                      static list, fuzzy filtered with matchfuzzypos()
 --- opts.live:  fun(query, done): vim.SystemObj?   re-run on every query change (e.g. grep)
---- item: { text = string, file?, lnum?, col?, bufnr? }
+--- item: { text = string, file?, lnum?, col? }
+---
+--- Insert mode types the query. <Esc> switches to normal mode to browse the list with
+--- j/k, gg/G, <C-d>/<C-u>; <Esc> or q there closes. <C-f>/<C-b> scroll the preview.
+--- In live pickers <C-g> freezes the results and fuzzy filters them instead.
 function Picker.open(opts)
   last_opts = opts
   local state = {
@@ -138,25 +142,30 @@ function Picker.open(opts)
     shown = {},
     selected = 1,
     gen = 0,
+    cache = {},
     origin_win = api.nvim_get_current_win(),
     origin_buf = api.nvim_get_current_buf(),
   }
 
-  local width = math.floor(vim.o.columns * 0.8)
-  local height = math.max(math.floor(vim.o.lines * 0.7), 8)
+  local width = math.floor(vim.o.columns * 0.9)
+  local height = math.max(math.floor(vim.o.lines * 0.8), 10)
   local row = math.floor((vim.o.lines - height) / 2) - 1
   local col = math.floor((vim.o.columns - width) / 2)
+  local list_width = math.floor(width * 0.45)
 
-  state.prompt_buf = api.nvim_create_buf(false, true)
-  state.list_buf = api.nvim_create_buf(false, true)
-  vim.bo[state.prompt_buf].bufhidden = "wipe"
-  vim.bo[state.list_buf].bufhidden = "wipe"
+  local function scratch()
+    local buf = api.nvim_create_buf(false, true)
+    vim.bo[buf].bufhidden = "wipe"
+    return buf
+  end
+  state.prompt_buf, state.list_buf, state.preview_buf = scratch(), scratch(), scratch()
+  vim.bo[state.prompt_buf].complete = "" -- keep 'autocomplete' popups out of the prompt
 
   state.prompt_win = api.nvim_open_win(state.prompt_buf, true, {
     relative = "editor",
     row = row,
     col = col,
-    width = width,
+    width = list_width,
     height = 1,
     style = "minimal",
     title = " " .. opts.title .. " ",
@@ -165,17 +174,82 @@ function Picker.open(opts)
     relative = "editor",
     row = row + 3,
     col = col,
-    width = width,
+    width = list_width,
     height = height - 3,
     style = "minimal",
     focusable = false,
   })
+  state.preview_win = api.nvim_open_win(state.preview_buf, false, {
+    relative = "editor",
+    row = row,
+    col = col + list_width + 2,
+    width = width - list_width - 2,
+    height = height,
+    style = "minimal",
+    focusable = false,
+    title = " Preview ",
+  })
   vim.wo[state.list_win].cursorline = true
   vim.wo[state.list_win].wrap = false
+  vim.wo[state.preview_win].cursorline = true
+  vim.wo[state.preview_win].number = true
+  vim.wo[state.preview_win].wrap = false
+
+  local function file_lines(file)
+    if state.cache[file] then return state.cache[file] end
+    local buf = vim.fn.bufnr(file)
+    local lines
+    if buf > 0 and api.nvim_buf_is_loaded(buf) then
+      lines = api.nvim_buf_get_lines(buf, 0, -1, false)
+    elseif vim.fn.filereadable(file) == 1 and vim.fn.getfsize(file) < 2 * 1024 * 1024 then
+      local ok, read = pcall(vim.fn.readfile, file)
+      lines = ok and read or { "[cannot read file]" }
+      if lines[1] and lines[1]:find "%z" then lines = { "[binary file]" } end
+    else
+      lines = { "[no preview]" }
+    end
+    state.cache[file] = lines
+    return lines
+  end
+
+  local function update_preview()
+    local item = state.shown[state.selected]
+    local buf, win = state.preview_buf, state.preview_win
+    if not item then return api.nvim_buf_set_lines(buf, 0, -1, false, {}) end
+    local lines = item.file and file_lines(item.file) or api.nvim_buf_get_lines(state.origin_buf, 0, -1, false)
+    api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+
+    local ft = item.file and vim.filetype.match { filename = item.file } or vim.bo[state.origin_buf].filetype
+    if ft ~= state.preview_ft then
+      state.preview_ft = ft
+      pcall(vim.treesitter.stop, buf)
+      local lang = ft and vim.treesitter.language.get_lang(ft)
+      if not (lang and pcall(vim.treesitter.start, buf, lang)) then vim.bo[buf].syntax = ft or "" end
+    end
+
+    api.nvim_buf_clear_namespace(buf, ns, 0, -1)
+    local lnum = math.min(item.lnum or 1, math.max(#lines, 1))
+    api.nvim_win_set_cursor(win, { lnum, 0 })
+    api.nvim_win_call(win, function() vim.cmd "normal! zz" end)
+    if item.lnum and item.col and item.match and lines[lnum] then
+      local stop = item.col - 1 + #state.query
+      if opts.live and not state.frozen and stop <= #lines[lnum] then
+        api.nvim_buf_set_extmark(buf, ns, lnum - 1, item.col - 1, { end_col = stop, hl_group = "Search" })
+      end
+    end
+    api.nvim_win_set_config(win, { title = " " .. (item.file and rel(item.file) or "Preview") .. " " })
+  end
+
+  local function select(index)
+    if #state.shown == 0 then return end
+    state.selected = math.max(1, math.min(index, #state.shown))
+    api.nvim_win_set_cursor(state.list_win, { state.selected, 0 })
+    update_preview()
+  end
 
   local function render()
     local shown, positions = {}, nil
-    if opts.live or state.query == "" then
+    if (opts.live and not state.frozen) or state.query == "" then
       shown = vim.list_slice(state.items, 1, MAX_ITEMS)
     else
       local res = vim.fn.matchfuzzypos(state.texts, state.query, { limit = MAX_ITEMS })
@@ -196,8 +270,9 @@ function Picker.open(opts)
         api.nvim_buf_set_extmark(state.list_buf, ns, i - 1, start, { end_col = stop, hl_group = "PickerMatch" })
       end
     end
-    api.nvim_win_set_cursor(state.list_win, { 1, 0 })
     api.nvim_win_set_config(state.list_win, { title = (" %d/%d "):format(#shown, #state.items), title_pos = "right" })
+    api.nvim_win_set_cursor(state.list_win, { 1, 0 })
+    update_preview()
   end
 
   local function set_items(items)
@@ -215,7 +290,7 @@ function Picker.open(opts)
     last_opts = vim.tbl_extend("force", opts, { query = state.query })
     if state.timer then state.timer:close() end
     if state.job then pcall(state.job.kill, state.job, 15) end
-    for _, win in ipairs { state.prompt_win, state.list_win } do
+    for _, win in ipairs { state.prompt_win, state.list_win, state.preview_win } do
       if api.nvim_win_is_valid(win) then api.nvim_win_close(win, true) end
     end
     vim.cmd.stopinsert()
@@ -230,8 +305,17 @@ function Picker.open(opts)
 
   local function move(delta)
     if #state.shown == 0 then return end
-    state.selected = (state.selected - 1 + delta) % #state.shown + 1
-    api.nvim_win_set_cursor(state.list_win, { state.selected, 0 })
+    select((state.selected - 1 + delta) % #state.shown + 1)
+  end
+
+  local function page(direction)
+    select(state.selected + direction * math.floor(api.nvim_win_get_height(state.list_win) / 2))
+  end
+
+  local function scroll_preview(keys)
+    api.nvim_win_call(state.preview_win, function()
+      vim.cmd("normal! " .. api.nvim_replace_termcodes(keys, true, false, true))
+    end)
   end
 
   local function to_quickfix()
@@ -252,6 +336,28 @@ function Picker.open(opts)
     vim.cmd.copen()
   end
 
+  local function set_query(query)
+    state.query = query
+    api.nvim_buf_set_lines(state.prompt_buf, 0, -1, false, { query })
+    api.nvim_win_set_cursor(state.prompt_win, { 1, #query })
+  end
+
+  -- Live pickers: stop re-running the source and fuzzy filter the current results instead
+  local function toggle_freeze()
+    if not opts.live then return end
+    state.frozen = not state.frozen
+    if state.frozen then
+      state.live_query = state.query
+      set_query ""
+    else
+      set_query(state.live_query or "")
+    end
+    api.nvim_win_set_config(state.prompt_win, {
+      title = " " .. opts.title .. (state.frozen and (" › " .. state.live_query .. " (filter)") or "") .. " ",
+    })
+    render()
+  end
+
   local function run_live()
     state.gen = state.gen + 1
     local gen = state.gen
@@ -263,33 +369,38 @@ function Picker.open(opts)
   end
 
   local function on_change()
-    state.query = api.nvim_buf_get_lines(state.prompt_buf, 0, 1, false)[1] or ""
-    if not opts.live then return render() end
+    local query = api.nvim_buf_get_lines(state.prompt_buf, 0, 1, false)[1] or ""
+    if query == state.query then return end -- e.g. TextChanged after leaving insert mode
+    state.query = query
+    if not opts.live or state.frozen then return render() end
     state.timer = state.timer or vim.uv.new_timer()
     state.timer:start(100, 0, vim.schedule_wrap(function()
       if not state.closed then run_live() end
     end))
   end
 
-  local keys = {
-    ["<CR>"] = function() choose "edit" end,
-    ["<C-s>"] = function() choose "split" end,
-    ["<C-v>"] = function() choose "vsplit" end,
-    ["<C-t>"] = function() choose "tab" end,
-    ["<C-q>"] = to_quickfix,
-    ["<Down>"] = function() move(1) end,
-    ["<C-n>"] = function() move(1) end,
-    ["<C-j>"] = function() move(1) end,
-    ["<Up>"] = function() move(-1) end,
-    ["<C-p>"] = function() move(-1) end,
-    ["<C-k>"] = function() move(-1) end,
-    ["<Esc>"] = close,
-    ["<C-c>"] = close,
-  }
-  for lhs, fn in pairs(keys) do
-    map({ "i", "n" }, lhs, fn, { buffer = state.prompt_buf, nowait = true })
-  end
-  map("n", "q", close, { buffer = state.prompt_buf, nowait = true })
+  local function bind(modes, lhs, fn) map(modes, lhs, fn, { buffer = state.prompt_buf, nowait = true }) end
+  local both = { "i", "n" }
+  bind(both, "<CR>", function() choose "edit" end)
+  bind(both, "<C-s>", function() choose "split" end)
+  bind(both, "<C-v>", function() choose "vsplit" end)
+  bind(both, "<C-t>", function() choose "tab" end)
+  bind(both, "<C-q>", to_quickfix)
+  bind(both, "<C-g>", toggle_freeze)
+  bind(both, "<C-c>", close)
+  for _, lhs in ipairs { "<Down>", "<C-n>", "<C-j>" } do bind(both, lhs, function() move(1) end) end
+  for _, lhs in ipairs { "<Up>", "<C-p>", "<C-k>" } do bind(both, lhs, function() move(-1) end) end
+  bind(both, "<C-d>", function() page(1) end)
+  bind(both, "<C-u>", function() page(-1) end)
+  bind(both, "<C-f>", function() scroll_preview "<C-d>" end)
+  bind(both, "<C-b>", function() scroll_preview "<C-u>" end)
+  -- normal mode: browse the list
+  bind("n", "j", function() move(1) end)
+  bind("n", "k", function() move(-1) end)
+  bind("n", "gg", function() select(1) end)
+  bind("n", "G", function() select(#state.shown) end)
+  bind("n", "<Esc>", close)
+  bind("n", "q", close)
 
   api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, { buffer = state.prompt_buf, callback = on_change })
   api.nvim_create_autocmd("BufLeave", { buffer = state.prompt_buf, once = true, callback = close })
