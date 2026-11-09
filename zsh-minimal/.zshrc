@@ -228,7 +228,7 @@ PROMPT='%B%F{cyan}%3~%f%b${_git_info}${_kube_info}
 ####################
 # Aliases
 ####################
-if ls --color=auto -d / >/dev/null 2>&1; then # GNU ls
+if ls --group-directories-first -d / >/dev/null 2>&1; then # GNU ls (macOS ls accepts --color but not this)
   alias ls='ls --color=auto'
   alias ll='ls -lh --color=auto --group-directories-first'
   alias la='ls -alh --color=auto --group-directories-first'
