@@ -1,7 +1,8 @@
 # Minimal zsh config: a single file, no plugins, nothing to download.
-# For airgapped machines. Mimics the full `zsh` package using only zsh built-ins:
-#   zcomet/fzf-tab -> menu completion, starship -> native prompt, zoxide -> cdr + `z`,
-#   fzf history -> incremental pattern search, zsh-syntax-highlighting -> command highlighter.
+# For airgapped machines. Mimics the full `zsh` package using zsh built-ins plus fzf if installed:
+#   zcomet/fzf-tab -> menu completion + fzf `**<Tab>`, starship -> native prompt,
+#   zoxide -> cdr + `z`/`zi`, zsh-syntax-highlighting -> command highlighter.
+# fzf integration comes from the fzf binary itself (`fzf --zsh`, fzf 0.48+).
 #
 # Usage: copy to ~/.zshrc (or `stow zsh-minimal` instead of `stow zsh`)
 
@@ -9,7 +10,12 @@
 # Environment
 ####################
 typeset -U path # dedupe PATH entries
-for dir in /usr/local/bin "$HOME/.cargo/bin" "$HOME/go/bin" "$HOME/.local/bin"; do
+# Homebrew (Linux, Intel macOS, Apple Silicon) and user bins
+for dir in /home/linuxbrew/.linuxbrew /usr/local /opt/homebrew; do
+  [[ -d $dir/bin ]] && path=("$dir/bin" $path)
+  [[ -d $dir/share/zsh/site-functions ]] && fpath=("$dir/share/zsh/site-functions" $fpath)
+done
+for dir in "$HOME/.cargo/bin" "$HOME/go/bin" "$HOME/.local/bin"; do
   [[ -d $dir ]] && path=("$dir" $path)
 done
 export PATH
@@ -107,7 +113,7 @@ bindkey -r '^u'
 bindkey -r '^d'
 bindkey '^e' edit-command-line
 bindkey -M vicmd '^e' edit-command-line
-bindkey '^r' history-incremental-pattern-search-backward # replaces fzf history
+bindkey '^r' history-incremental-pattern-search-backward # fallback when fzf is not installed
 bindkey -M vicmd '^r' history-incremental-pattern-search-backward
 bindkey -M isearch '^p' history-incremental-pattern-search-backward
 bindkey -M isearch '^n' history-incremental-pattern-search-forward
@@ -155,6 +161,39 @@ function z {
   print -u2 "z: no recent directory matches '$*'"
   return 1
 }
+
+####################
+# fzf
+####################
+# Provides ^R (history), ^T (insert file path), Alt-C (cd into subdirectory) and `**<Tab>` completion
+if (( $+commands[fzf] )); then
+  export FZF_DEFAULT_OPTS="--layout=reverse --info=inline --height=40% --border"
+  if (( $+commands[fd] )); then
+    export FZF_DEFAULT_COMMAND="fd --type f --hidden --exclude .git"
+    export FZF_ALT_C_COMMAND="fd --type d --hidden --exclude .git"
+  elif (( $+commands[rg] )); then
+    export FZF_DEFAULT_COMMAND="rg --files --hidden --glob '!.git'"
+  fi # otherwise fzf uses its own built-in file walker
+  [[ -n $FZF_DEFAULT_COMMAND ]] && export FZF_CTRL_T_COMMAND=$FZF_DEFAULT_COMMAND
+  if (( $+commands[bat] )); then
+    export FZF_CTRL_T_OPTS="--preview 'bat --color=always --style=numbers --line-range=:200 {}'"
+  else
+    export FZF_CTRL_T_OPTS="--preview 'head -200 {}'"
+  fi
+  export FZF_ALT_C_OPTS="--preview 'ls -A {} | head -200'"
+  source <(fzf --zsh)
+
+  # zi: pick a recent directory with fzf
+  function zi {
+    local entry dir
+    local -a dirs
+    for entry in ${(f)"$(cdr -l 2>/dev/null)"}; do
+      dirs+=("${${entry##<->[[:space:]]##}/#\~/$HOME}")
+    done
+    dir=$(print -rl -- $dirs | fzf --query="$*" --select-1 --exit-0 --preview 'ls -A {} | head -200') || return
+    cd -- "$dir"
+  }
+fi
 
 ####################
 # Prompt (replaces starship)
@@ -267,8 +306,23 @@ if (( $+commands[kubectl] )); then
   alias kgss='kubectl get secrets'
   alias kgd='kubectl get deployment'
   # kubectx/kubens replacements
-  kctx() { (( $# )) && kubectl config use-context "$1" || kubectl config get-contexts }
-  kns() { (( $# )) && kubectl config set-context --current --namespace="$1" || kubectl get namespaces }
+  # with no argument: pick with fzf if available, otherwise list
+  function kctx {
+    local ctx=$1
+    if [[ -z $ctx ]]; then
+      (( $+commands[fzf] )) || { kubectl config get-contexts; return }
+      ctx=$(kubectl config get-contexts -o name | fzf --prompt='context> ') || return
+    fi
+    kubectl config use-context "$ctx"
+  }
+  function kns {
+    local ns=$1
+    if [[ -z $ns ]]; then
+      (( $+commands[fzf] )) || { kubectl get namespaces; return }
+      ns=$(kubectl get namespaces -o name | sed 's|^namespace/||' | fzf --prompt='namespace> ') || return
+    fi
+    kubectl config set-context --current --namespace="$ns"
+  }
 fi
 
 ####################
